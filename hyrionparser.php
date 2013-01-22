@@ -17,12 +17,12 @@
 	 * You should have received a copy of the GNU General Public License along
 	 * with this program; if not, write to the Free Software Foundation, Inc.,
 	 * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-	*/
+	 */
 	class Hyrion_parser
 	{
 		public function __construct()
 		{
-			UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/'', 1.1);	
+			UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);	
 		}
 	}
 	
