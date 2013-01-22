@@ -20,45 +20,96 @@
 	 */
 	class Hyrion_parser
 	{
+		/**
+		 * This variable is for saving the output
+		 *
+		 * @since 1.0
+		 * @access public
+		 * @author Maarten Oosting
+		 */
 		Public static $content;
+
+		/**
+		 * This variable is for saving the error's
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */
 		Private static $error = false;
 
+
+		/**
+		 * This variable is for calling the classname of the parser functions
+		 *
+		 * @since 1.0
+		 * @access public
+		 * @author Maarten Oosting
+		 */
+		Public $classname_parserfunctions;
+
+		/**
+		 * Constructor
+		 *
+		 * @since 1.0
+		 * @access public
+		 * @author Maarten Oosting
+		 */
 		public function __construct()
 		{
 			/**
 			 * UpdateCheck
 			 * Copyright (C) 2012 KvanSteijn
 			 */
-			require_once('updatecheck.php');
-			UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
+				UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
 			/**
 			 * End UpdateCheck
 			 */
 		}
 		
+		/**
+		 * Parse
+		 * You can call this function for parse a file
+		 *
+		 * @since 1.0
+		 * @access public
+		 * @author Maarten Oosting
+		 */
 		public function parse($filename,$data='')
 		{
-			if(isset($filename))
-			{
-				$content = $this->get_file($filename);
-				if($content)
+			try {
+				if(isset($filename))
 				{
-					if(isset($data))
+					$content = $this->get_file($filename);
+					if($content)
 					{
-						//Hier returnt hij de content naar de controller
-						$content = $this->parce_ifs($content);
-						return $this->start_parce($content,$data);
+						if(isset($data))
+						{
+							//Hier returnt hij de content naar de controller
+							$content = $this->parce_ifs($content);
+							return $this->start_parce($content,$data);
+						}else{
+							//only include
+							return $content;
+						}
 					}else{
-						//only include
-						return $content;
+						return false;
 					}
-				}else{
-					return false;
 				}
+			} catch (Exception $e) {
+				print_r($e->getMessage());
+				exit();
 			}
 		}
-		
-		function get_file($filename)
+
+		/**
+		 * get_files
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */		
+		Private function get_file($filename)
 		{
 			$filename = $filename;
 			if(file_exists($filename))
@@ -68,8 +119,16 @@
 				return false;
 			}
 		}
-		
-		function start_parce($content,$data)
+
+		/**
+		 * Start_parce
+		 * Check if content is a arrray
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */			
+		Private function start_parce($content,$data)
 		{
 			
 			if($content == '' || empty($content))
@@ -93,14 +152,29 @@
 			
 			return $content;
 		}
-		
-		function parse_one($key, $val, $content)
+
+		/**
+		 * Parse the single content
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */			
+		Private function parse_one($key, $val, $content)
 		{
 			$key = "{".$key."}";
 			return str_replace($key, $val, $content);
 		}
 		
-		function parse_array($var,$data,$content)
+
+		/**
+		 * Parse the array content
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */	
+		Private function parse_array($var,$data,$content)
 		{
 			if (false === ($match = $this->match($content, $var)))
 			{
@@ -127,7 +201,15 @@
 			return str_replace($match['0'], $data_all, $content);
 		}
 		
-		function match($content, $var)
+		/**
+		 * -
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */	
+
+		Private function match($content, $var)
 		{
 			if(!preg_match("|{".$var."}(.+?){/".$var."}|s", $content, $match))
 			{
@@ -136,74 +218,87 @@
 				return $match;
 			}
 		}
-		
-		function parce_ifs($content)
+
+		/**
+		 * Parse the IF statments
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting
+		 */			
+		private function parce_ifs($content)
 		{
-			if (!preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match))
-			{
-				//echo "false!";
+			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
 			}else{
-				foreach($match[1] as $key2=>$val2)
+				if (!preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match))
 				{
-					if(preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $val2, $match2))
+					//echo "false!";
+				}else{
+					foreach($match[1] as $key2=>$val2)
 					{
-						if(!preg_match("|[\W]+|s", $match2[1], $match3))
+						if(preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $val2, $match2))
 						{
-							$functions = new Parser_functions();
-							if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
+							if(!preg_match("|[\W]+|s", $match2[1], $match3))
 							{
-								if(isset($match2[2]))
+								$functions = new $classname();
+								
+								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
 								{
-									if($functions->$match2[1]($match2[2]) == $match2[3])
+									if(isset($match2[2]))
 									{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
+										if($functions->$match2[1]($match2[2]) == $match2[3])
+										{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
+										}else{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
+										}
 									}else{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
+										if($functions->$match2[1]() == $match2[3])
+										{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
+										}else{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
+										}
 									}
 								}else{
-									if($functions->$match2[1]() == $match2[3])
+									if(isset($match2[2]))
 									{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
+										$match[2][$key2] .= "<!-- END IF -->";
+										preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
+										if($functions->$match2[1]($match2[2]) == $match2[3])
+										{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
+										}else{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
+										}
 									}else{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
+										$match[2][$key2] .= "<!-- END IF -->";
+										preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
+										if($functions->$match2[1]() == $match2[3])
+										{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
+										}else{
+											$start_tag = "<!-- IF ".$val2." -->";
+											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
+										}
 									}
 								}
 							}else{
-								if(isset($match2[2]))
-								{
-									$match[2][$key2] .= "<!-- END IF -->";
-									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
-									if($functions->$match2[1]($match2[2]) == $match2[3])
-									{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
-									}else{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
-									}
-								}else{
-									$match[2][$key2] .= "<!-- END IF -->";
-									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
-									if($functions->$match2[1]() == $match2[3])
-									{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
-									}else{
-										$start_tag = "<!-- IF ".$val2." -->";
-										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
-									}
-								}
+								//throw error!
 							}
-						}else{
-							//throw error!
 						}
 					}
 				}
-			}		
+			}
 			return $content;
 		}
 	}
