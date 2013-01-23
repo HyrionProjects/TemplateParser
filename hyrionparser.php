@@ -301,5 +301,19 @@
 			}
 			return $content;
 		}
+
+		Private function ParseCalledFunctions($content)
+		{
+			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
+			}else{
+				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')." (.+?) ".preg_quote ('] -->')."|s", $content, $match))
+				{
+					$functions = new $classname();
+					print_r($match);
+				}
+			}
+		}
 	}
 ?>
