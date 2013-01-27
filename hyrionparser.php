@@ -293,6 +293,8 @@
 				}else{
 					foreach($match[1] as $key2=>$val2)
 					{
+						//Check IF functions have argument
+						//Example Function($argument) == TRUE;
 						if(preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $val2, $match2))
 						{
 							if(!preg_match("|[\W]+|s", $match2[1], $match3))
@@ -304,15 +306,6 @@
 									if(isset($match2[2]))
 									{
 										if($functions->$match2[1]($match2[2]) == $match2[3])
-										{
-											$start_tag = "<!-- IF ".$val2." -->";
-											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
-										}else{
-											$start_tag = "<!-- IF ".$val2." -->";
-											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
-										}
-									}else{
-										if($functions->$match2[1]() == $match2[3])
 										{
 											$start_tag = "<!-- IF ".$val2." -->";
 											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
@@ -334,17 +327,35 @@
 											$start_tag = "<!-- IF ".$val2." -->";
 											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
 										}
+									}
+								}
+							}else{
+								//throw error!
+							}
+						}elseif(preg_match("|(.+?)\(\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $val2, $match2)){
+							if(!preg_match("|[\W]+|s", $match2[1], $match3))
+							{
+								$functions = new $classname();
+								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
+								{
+									if($functions->$match2[1]() == $match2[3])
+									{
+										$start_tag = "<!-- IF ".$val2." -->";
+										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
 									}else{
-										$match[2][$key2] .= "<!-- END IF -->";
-										preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
-										if($functions->$match2[1]() == $match2[3])
-										{
-											$start_tag = "<!-- IF ".$val2." -->";
-											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
-										}else{
-											$start_tag = "<!-- IF ".$val2." -->";
-											$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
-										}
+										$start_tag = "<!-- IF ".$val2." -->";
+										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", "", $content,1);
+									}
+								}else{
+									$match[2][$key2] .= "<!-- END IF -->";
+									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
+									if($functions->$match2[1]() == $match2[3])
+									{
+										$start_tag = "<!-- IF ".$val2." -->";
+										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
+									}else{
+										$start_tag = "<!-- IF ".$val2." -->";
+										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[2], $content,1);
 									}
 								}
 							}else{
