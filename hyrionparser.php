@@ -27,7 +27,7 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */
-		Public static $content;
+		public static $content;
 
 		/**
 		 * This variable is for set the prefix and suffix
@@ -46,7 +46,7 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */
-		Public static $state = false;
+		public static $state = false;
 
 		/**
 		 * This variable is for saving the error's
@@ -55,7 +55,7 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */
-		Private static $error = false;
+		private static $error = false;
 
 
 		/**
@@ -65,7 +65,7 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */
-		Public $classname_parserfunctions;
+		public $classname_parserfunctions;
 
 		/**
 		 * Constructor
@@ -167,7 +167,7 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */		
-		Private function get_file($filename)
+		private function get_file($filename)
 		{
 			if(file_exists($filename)) {
 				self::$content = file_get_contents($filename);
@@ -215,7 +215,7 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */			
-		Private function parse_one($key, $val, $content)
+		private function parse_one($key, $val, $content)
 		{
 			$key = "{".$key."}";
 			return str_replace($key, $val, $content);
@@ -229,7 +229,7 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */	
-		Private function parse_array($var,$data,$content)
+		private function parse_array($var,$data,$content)
 		{
 			if (false === ($match = $this->match($content, $var)))
 			{
@@ -264,9 +264,9 @@
 		 * @author Maarten Oosting
 		 */	
 
-		Private function match($content, $var)
+		private function match($content, $var)
 		{
-			if(!preg_match("|".self::$p_prefix.$var.self::$p_suffix."}(.+?){/".self::$p_prefix.$var.self::$p_suffix."}|s", $content, $match))
+			if(!preg_match("|".self::$p_prefix.$var.self::$p_suffix."(.+?)".self::$p_prefix .'/'.$var.self::$p_suffix."|s", $content, $match))
 			{
 				return FALSE;
 			}else{
@@ -368,7 +368,7 @@
 			return $content;
 		}
 
-		Private function ParseCalledFunctions()
+		private function ParseCalledFunctions()
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
 			if (!class_exists($classname)) {
