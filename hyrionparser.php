@@ -113,7 +113,6 @@
 						}
 					}
 				}
-				
 				return $action;
 			} catch (Exception $e) {
 				print_r($e->getMessage());
@@ -335,21 +334,17 @@
 		private function ParseCalledFunctions($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
-			if (!class_exists($classname)) {
-				throw new Exception("Called function class is not a (valid) class", 458);
-			} else {
-				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
-				{
-					$function_class = new $classname();
-					foreach ($match[0] as $key1 => $val1) {
-						$output_function = '';
-						$function_name = $match[1][$key1];
-						$output_function = $function_class->$function_name();
-						$content = str_replace($val1, $output_function, $content);
-					}
+			if (!class_exists($classname)) throw new Exception("Called function class is not a (valid) class", 458);
+			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
+			{
+				$function_class = new $classname();
+				foreach ($match[0] as $key1 => $val1) {
+					$output_function = '';
+					$function_name = $match[1][$key1];
+					$output_function = $function_class->$function_name();
+					$content = str_replace($val1, $output_function, $content);
 				}
 			}
-			
 			return $content;
 		}
 	}
