@@ -24,10 +24,10 @@
 		 * This variable is for saving the output
 		 *
 		 * @since 1.0
-		 * @access public
+		 * @access private
 		 * @author Maarten Oosting
 		 */
-		public static $content;
+		private $content = false;
 
 		/**
 		 * This variable is for set the prefix and suffix
@@ -36,17 +36,8 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */
-		public static $p_prefix = '{';
-		public static $p_suffix = '}';
-
-		/**
-		 * This variable is for checking the state of the parser
-		 *
-		 * @since 1.0
-		 * @access public
-		 * @author Maarten Oosting
-		 */
-		public static $state = false;
+		public $p_prefix = '{';
+		public $p_suffix = '}';
 
 		/**
 		 * This variable is for saving the error's
@@ -55,8 +46,7 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */
-		private static $error = false;
-
+		private $error = false;
 
 		/**
 		 * This variable is for calling the classname of the parser functions
@@ -113,25 +103,22 @@
 			try {
 				if(isset($filename))
 				{
-					$this->get_file($filename);
-					self::$state = true;
-					if(isset(self::$content))
+					$action = false;
+					if($content = $this->get_file($filename))
 					{
-						if(isset($data))
-						{
+						if(!empty($data))
+						{						
 							//Hier returnt hij de content naar de controller
-							$this->ParseCalledFunctions();
-							self::$content = $this->parce_ifs(self::$content);
-							$this->start_parce(self::$content,$data);
-
-							return true;
-						}else{
-							//only include
-							return true;
+							$content = $this->ParseCalledFunctions($content);				
+							$content = $this->parce_ifs($content);
+							if ($content = $this->start_parce($content, $data)) {
+								$this->content = $content;
+								$action = true;
+							}
 						}
-					}else{
-						return false;
 					}
+					
+					return $action;
 				}
 			} catch (Exception $e) {
 				print_r($e->getMessage());
@@ -150,10 +137,10 @@
 		public function getContent()
 		{
 			try{
-				if(self::$state == true)
-				{
-					return self::$content;
-				}else throw new Exception("State is false", 372);
+				$content = $this->content;
+				if($content) return $content;
+				
+				throw new Exception("State is false", 372);
 			} catch (Exception $e) {
 				print_r($e);
 				exit();
@@ -169,9 +156,8 @@
 		 */		
 		private function get_file($filename)
 		{
-			if(file_exists($filename)) {
-				self::$content = file_get_contents($filename);
-				return true;
+			if (file_exists($filename)) {
+				return file_get_contents($filename);
 			}else{
 				return false;
 			}
@@ -185,27 +171,24 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */			
-		Private function start_parce($content,$data)
+		private function start_parce($content,$data)
 		{
-			$output = self::$content;
-			if($output == '' || empty($output)) return false;
-			
+			if($content == '' || empty($content)) return false;
+
 			foreach($data as $key => $val)
 			{
 				if(!is_array($val))
 				{
-					$output = $this->parse_one($key,$val,$output);		
+					$content = $this->parse_one($key,$val,$content);		
 				}
 				else
 				{
 					//als er meerdere values zijn in de array
-					$output = $this->parse_array($key,$val,$output);
+					$content = $this->parse_array($key,$val,$content);
 				}
 			}
 			
-			//Set output in content
-			self::$content = $output;
-			return true;
+			return $content;
 		}
 
 		/**
@@ -217,7 +200,7 @@
 		 */			
 		private function parse_one($key, $val, $content)
 		{
-			$key = "{".$key."}";
+			$key = $this->p_prefix.$key.$this->p_suffix;
 			return str_replace($key, $val, $content);
 		}
 		
@@ -231,10 +214,8 @@
 		 */	
 		private function parse_array($var,$data,$content)
 		{
-			if (false === ($match = $this->match($content, $var)))
-			{
-				return $content;
-			}
+			if ($match = $this->match($content, $var) == false) return $content;
+			
 			$data_all = '';
 			if(!empty($data))
 			{
@@ -253,6 +234,7 @@
 					$data_all .= $cache;
 				}
 			}
+			
 			return str_replace($match['0'], $data_all, $content);
 		}
 		
@@ -263,11 +245,12 @@
 		 * @access private
 		 * @author Maarten Oosting
 		 */	
-
 		private function match($content, $var)
 		{
-			if(!preg_match("|".self::$p_prefix.$var.self::$p_suffix."(.+?)".self::$p_prefix .'/'.$var.self::$p_suffix."|s", $content, $match))
-			{
+			$p_prefix = $this->p_prefix;
+			$p_suffix = $this->p_suffix;
+			
+			if(!preg_match("|".$p_prefix.$var.$p_suffix."(.+?)".$p_prefix .'/'.$var.$p_suffix."|s", $content, $match)) {
 				return FALSE;
 			}else{
 				return $match;
@@ -365,28 +348,29 @@
 					}
 				}
 			}
+			
 			return $content;
 		}
 
-		private function ParseCalledFunctions()
+		private function ParseCalledFunctions($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
 			if (!class_exists($classname)) {
 				throw new Exception("Called function class is not a (valid) class", 458);
-			}else{
-				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", self::$content, $match))
+			} else {
+				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
 				{
-					$output = self::$content;
 					$function_class = new $classname();
 					foreach ($match[0] as $key1 => $val1) {
 						$output_function = '';
 						$function_name = $match[1][$key1];
 						$output_function = $function_class->$function_name();
-						$output = str_replace($val1, $output_function, $output);
+						$content = str_replace($val1, $output_function, $content);
 					}
-					self::$content = $output;
 				}
 			}
+			
+			return $content;
 		}
 	}
 ?>
