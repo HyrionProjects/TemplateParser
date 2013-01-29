@@ -98,28 +98,23 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */
-		public function parse($filename,$data='')
+		public function parse($filename, $data)
 		{
 			try {
-				if(isset($filename))
-				{
-					$action = false;
-					if($content = $this->get_file($filename))
-					{
-						if(!empty($data))
-						{						
-							//Hier returnt hij de content naar de controller
-							$content = $this->ParseCalledFunctions($content);				
-							$content = $this->parce_ifs($content);
-							if ($content = $this->start_parce($content, $data)) {
-								$this->content = $content;
-								$action = true;
-							}
+				$action = false;
+				if (!empty($filename) && is_array($data)) {
+					if ($content = $this->get_file($filename)) {						
+						//Hier returnt hij de content naar de controller
+						$content = $this->ParseCalledFunctions($content);				
+						$content = $this->parce_ifs($content);
+						if ($content = $this->start_parce($content, $data)) {
+							$this->content = $content;
+							$action = true;
 						}
 					}
-					
-					return $action;
 				}
+				
+				return $action;
 			} catch (Exception $e) {
 				print_r($e->getMessage());
 				exit();
@@ -158,9 +153,7 @@
 		{
 			if (file_exists($filename)) {
 				return file_get_contents($filename);
-			}else{
-				return false;
-			}
+			} else return false;
 		}
 
 		/**
@@ -173,19 +166,11 @@
 		 */			
 		private function start_parce($content,$data)
 		{
-			if($content == '' || empty($content)) return false;
-
 			foreach($data as $key => $val)
 			{
-				if(!is_array($val))
-				{
-					$content = $this->parse_one($key,$val,$content);		
-				}
-				else
-				{
-					//als er meerdere values zijn in de array
-					$content = $this->parse_array($key,$val,$content);
-				}
+				if (is_array($val)) {
+					$content = $this->parse_array($key,$val,$content);		
+				} else $content = $this->parse_one($key,$val,$content);
 			}
 			
 			return $content;
@@ -200,7 +185,7 @@
 		 */			
 		private function parse_one($key, $val, $content)
 		{
-			$key = $this->p_prefix.$key.$this->p_suffix;
+			$key = $this->p_prefix . $key . $this->p_suffix;
 			return str_replace($key, $val, $content);
 		}
 		
@@ -218,19 +203,16 @@
 			if ($match == false) return $content;
 
 			$data_all = '';
-			foreach($data as $value)
-			{
-				$cache = $match['1'];
-				foreach($value as $key => $val)
-				{
-					if(is_array($val))
-					{
-						$cache = $this->parse_array($key,$val,$cache);
-					}else{
-						$cache = $this->parse_one($key,$val,$cache);
+			foreach($data as $value) {
+				if (is_array($value)) {
+					$cache = $match['1'];
+					foreach($value as $key => $val) {
+						if (is_array($val)) {
+							$cache = $this->parse_array($key,$val,$cache);
+						} else $cache = $this->parse_one($key,$val,$cache);
 					}
+					$data_all .= $cache;
 				}
-				$data_all .= $cache;
 			}
 			
 			return str_replace($match['0'], $data_all, $content);
@@ -247,8 +229,8 @@
 		{
 			$p_prefix = $this->p_prefix;
 			$p_suffix = $this->p_suffix;
-			
-			if(!preg_match("|".$p_prefix.$var.$p_suffix."(.+?)".$p_prefix .'/'.$var.$p_suffix."|s", $content, $match)) {
+
+			if(!preg_match("|". $p_prefix . $var . $p_suffix . "(.+?)" . $p_prefix . '/' . $var . $p_suffix . "|s", $content, $match)) {
 				return FALSE;
 			}else{
 				return $match;
