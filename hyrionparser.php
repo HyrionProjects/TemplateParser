@@ -214,25 +214,23 @@
 		 */	
 		private function parse_array($var,$data,$content)
 		{
-			if ($match = $this->match($content, $var) == false) return $content;
-			
+			$match = $this->match($content, $var);
+			if ($match == false) return $content;
+
 			$data_all = '';
-			if(!empty($data))
+			foreach($data as $value)
 			{
-				foreach($data as $value)
+				$cache = $match['1'];
+				foreach($value as $key => $val)
 				{
-					$cache = $match['1'];
-					foreach($value as $key => $val)
+					if(is_array($val))
 					{
-						if(is_array($val))
-						{
-							$cache = $this->parse_array($key,$val,$cache);
-						}else{
-							$cache = $this->parse_one($key,$val,$cache);
-						}
+						$cache = $this->parse_array($key,$val,$cache);
+					}else{
+						$cache = $this->parse_one($key,$val,$cache);
 					}
-					$data_all .= $cache;
 				}
+				$data_all .= $cache;
 			}
 			
 			return str_replace($match['0'], $data_all, $content);
