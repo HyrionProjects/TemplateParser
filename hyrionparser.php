@@ -300,7 +300,7 @@
 								$functions = new $classname();
 								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
 								{
-									if($functions->$match2[1]() == $match2[3])
+									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
 										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match[2][$key2], $content,1);
@@ -311,7 +311,7 @@
 								}else{
 									$match[2][$key2] .= "<!-- END IF -->";
 									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
-									if($functions->$match2[1]() == $match2[3])
+									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
 										$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $match4[1], $content,1);
