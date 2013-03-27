@@ -70,7 +70,9 @@
 			 * UpdateCheck
 			 * Copyright (C) 2012 KvanSteijn
 			 */
-				//UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
+		
+			UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
+			
 			/**
 			 * End UpdateCheck
 			 */
@@ -113,6 +115,7 @@
 						}
 					}
 				}
+				
 				return $action;
 			} catch (Exception $e) {
 				print_r($e->getMessage());
@@ -235,6 +238,24 @@
 				return $match;
 			}
 		}
+		
+		private function IFStart()
+		{
+			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
+			}
+			
+			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
+				$this->IFLoop($content, $match);
+			}
+		}
+		
+		private function IFLoop($content, $match)
+		{
+			
+			
+		}
 
 		/**
 		 * Parse the IF statments
@@ -266,7 +287,7 @@
 								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
 								{
 									if(isset($match2[2]))
-									{
+									{						
 										if($functions->$match2[1]($match2[2]) == $match2[3])
 										{
 											$start_tag = "<!-- IF ".$val2." -->";
@@ -299,7 +320,7 @@
 							{
 								$functions = new $classname();
 								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
-								{
+								{		
 									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
@@ -311,6 +332,7 @@
 								}else{
 									$match[2][$key2] .= "<!-- END IF -->";
 									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
+									
 									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
@@ -334,17 +356,21 @@
 		private function ParseCalledFunctions($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
-			if (!class_exists($classname)) throw new Exception("Called function class is not a (valid) class", 458);
-			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
-			{
-				$function_class = new $classname();
-				foreach ($match[0] as $key1 => $val1) {
-					$output_function = '';
-					$function_name = $match[1][$key1];
-					$output_function = $function_class->$function_name();
-					$content = str_replace($val1, $output_function, $content);
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
+			} else {
+				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
+				{
+					$function_class = new $classname();
+					foreach ($match[0] as $key1 => $val1) {
+						$output_function = '';
+						$function_name = $match[1][$key1];
+						$output_function = $function_class->$function_name();
+						$content = str_replace($val1, $output_function, $content);
+					}
 				}
 			}
+			
 			return $content;
 		}
 	}
