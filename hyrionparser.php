@@ -239,6 +239,13 @@
 			}
 		}
 		
+		/**
+		 * Staet search and parse a IF statments
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Maarten Oosting, Kevin van Steijn
+		 */	
 		private function IFStart($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
@@ -247,16 +254,24 @@
 			}
 			
 			$class = new $classname();
-			$content = $this->FoundAIF($content, $class);
+			$content = $this->SearchAIF($content, $class);
 			
 			return $content;
 		}
 		
-		private function FoundAIF($content, $class)
+		/**
+		 * Search to a IF statments
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Maarten Oosting, Kevin van Steijn
+		 */	
+		private function SearchAIF($content, $class)
 		{
 			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."[^".preg_quote ('<!-- IF')."](.+?)[^".preg_quote ('<!-- END IF -->')."]".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
 				$content = $this->IFLoop($content, $match, $class);
-			}
+			} else if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match))
+				$content = $this->IFLoop($content, $match, $class);
 			
 			return $content;
 		}
@@ -264,7 +279,7 @@
 		/**
 		 * Loop and parse IF statments
 		 *
-		 * @since 1.0
+		 * @since 2.0
 		 * @access private
 		 * @author Maarten Oosting, Kevin van Steijn
 		 */	
@@ -284,10 +299,10 @@
 						$match1[2][$key] .= "<!-- END IF -->";
 						preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match1[2][$key], $match4);
 
-						$replace_good = $this->FoundAIF($match4[1], $class);
-						$replace_else = $this->FoundAIF($match4[2], $class);						
+						$replace_good = $this->SearchAIF($match4[1], $class);
+						$replace_else = $this->SearchAIF($match4[2], $class);						
 					} else {
-						$replace_good = $this->FoundAIF($match1[2][$key], $class);
+						$replace_good = $this->SearchAIF($match1[2][$key], $class);
 						$replace_else = '';
 					}
 					
