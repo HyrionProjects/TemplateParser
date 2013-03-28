@@ -108,7 +108,7 @@
 					if ($content = $this->get_file($filename)) {						
 						//Hier returnt hij de content naar de controller
 						$content = $this->ParseCalledFunctions($content);				
-						$content = $this->parce_ifs($content);
+						$content = $this->IFStart($content);
 						if ($content = $this->start_parce($content, $data)) {
 							$this->content = $content;
 							$action = true;
@@ -239,22 +239,64 @@
 			}
 		}
 		
-		private function IFStart()
+		private function IFStart($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
 			if (!class_exists($classname)) {
 				throw new Exception("Called function class is not a (valid) class", 458);
 			}
 			
-			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
-				$this->IFLoop($content, $match);
-			}
+			$class = new $classname();
+			$content = $this->FoundAIF($content, $class);
+			
+			return $content;
 		}
 		
-		private function IFLoop($content, $match)
+		private function FoundAIF($content, $class)
 		{
+			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
+				$content = $this->IFLoop($content, $match, $class);
+			}
 			
+			return $content;
+		}
+		
+		private function IFLoop($content, $match1, $class)
+		{
+			print_r($match1[1]);
+			foreach($match1[1] as $key => $value) {
+				if (preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $value, $other)) {
+					$match2 = $other;
+					$action = TRUE;
+				} else if (preg_match("|(.+?)\(\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $value, $other)){
+					$match2 = $other;
+					$action = FALSE;
+				} else continue;
 			
+				if (!preg_match("|[\W]+|s", $match2[1], $match3)) {
+					if (preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match1[2][$key], $match3)) {
+						$match1[2][$key] .= "<!-- END IF -->";
+						preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match1[2][$key], $match4);
+
+						$replace_good = $this->FoundAIF($match4[1], $class);
+						$replace_else = $this->FoundAIF($match4[2], $class);						
+					} else {
+						$replace_good = $this->FoundAIF($match1[2][$key], $class);
+						$replace_else = '';
+					}
+					
+					if ($action) {
+						$replace = ($class->$match2[1]($match2[2]) == $match2[3]) ? $replace_good : $replace_else;
+					} else $replace = ($class->$match2[1]() == $match2[2]) ? $replace_good : $replace_else;
+
+					echo $replace;
+
+					$start_tag = "<!-- IF $value -->";
+					$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $replace, $content,1);
+				}
+			}
+			
+			return $content;
 		}
 
 		/**
