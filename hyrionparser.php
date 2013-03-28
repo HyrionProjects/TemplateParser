@@ -254,7 +254,7 @@
 		
 		private function FoundAIF($content, $class)
 		{
-			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
+			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."[^".preg_quote ('<!-- IF')."](.+?)[^".preg_quote ('<!-- END IF -->')."]".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
 				$content = $this->IFLoop($content, $match, $class);
 			}
 			
@@ -263,7 +263,6 @@
 		
 		private function IFLoop($content, $match1, $class)
 		{
-			print_r($match1[1]);
 			foreach($match1[1] as $key => $value) {
 				if (preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $value, $other)) {
 					$match2 = $other;
@@ -272,7 +271,7 @@
 					$match2 = $other;
 					$action = FALSE;
 				} else continue;
-			
+
 				if (!preg_match("|[\W]+|s", $match2[1], $match3)) {
 					if (preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match1[2][$key], $match3)) {
 						$match1[2][$key] .= "<!-- END IF -->";
@@ -288,11 +287,8 @@
 					if ($action) {
 						$replace = ($class->$match2[1]($match2[2]) == $match2[3]) ? $replace_good : $replace_else;
 					} else $replace = ($class->$match2[1]() == $match2[2]) ? $replace_good : $replace_else;
-
-					echo $replace;
-
-					$start_tag = "<!-- IF $value -->";
-					$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $replace, $content,1);
+					
+					$content = str_replace($match1[2][$key], $replace, $content);
 				}
 			}
 			
@@ -416,4 +412,5 @@
 			return $content;
 		}
 	}
+	
 ?>
