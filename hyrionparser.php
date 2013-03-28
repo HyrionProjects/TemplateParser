@@ -291,15 +291,15 @@
 						$replace_else = '';
 					}
 					
-					if ($action) {
-						$output = var_export($class->$match2[1]($match2[2]), TRUE);
-						$output = strtoupper("$output");
-						$replace = ($match2[3] == $output) ? $replace_good : $replace_else;
-					} else {
-						$output = var_export($class->$match2[1](), TRUE);
-						$output = strtoupper("$output");
-						$replace = ($match2[2] == $output) ? $replace_good : $replace_else;	
+					$output = ($action) ? $class->$match2[1]($match2[2]) : $class->$match2[1]();
+					if (is_bool($output) === TRUE) {
+						$output = var_export($output, TRUE);
+						$output = strtoupper("$output");	
 					}
+					
+					if ($action) {
+						$replace = ($match2[3] == $output) ? $replace_good : $replace_else;
+					} else $replace = ($match2[2] == $output) ? $replace_good : $replace_else;	
 					
 					$content = str_replace($match1[0][$key], $replace, $content);
 				}
