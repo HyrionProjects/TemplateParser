@@ -70,7 +70,9 @@
 			 * UpdateCheck
 			 * Copyright (C) 2012 KvanSteijn
 			 */
-				//UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
+		
+			UpdateCheck::SetUpdate('http://hyrion.com/updates/parser/standalone/', 1.1);
+			
 			/**
 			 * End UpdateCheck
 			 */
@@ -106,13 +108,14 @@
 					if ($content = $this->get_file($filename)) {						
 						//Hier returnt hij de content naar de controller
 						$content = $this->ParseCalledFunctions($content);				
-						$content = $this->parce_ifs($content);
+						$content = $this->IFStart($content);
 						if ($content = $this->start_parce($content, $data)) {
 							$this->content = $content;
 							$action = true;
 						}
 					}
 				}
+				
 				return $action;
 			} catch (Exception $e) {
 				print_r($e->getMessage());
@@ -235,6 +238,65 @@
 				return $match;
 			}
 		}
+		
+		private function IFStart($content)
+		{
+			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
+			}
+			
+			$class = new $classname();
+			$content = $this->FoundAIF($content, $class);
+			
+			return $content;
+		}
+		
+		private function FoundAIF($content, $class)
+		{
+			if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."[^".preg_quote ('<!-- IF')."](.+?)[^".preg_quote ('<!-- END IF -->')."]".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
+			//if (preg_match_all("|".preg_quote ('<!-- IF')." (.+?) ".preg_quote ('-->')."(.+?)".preg_quote ('<!-- END IF -->')."|s", $content, $match)) {
+				
+				$content = $this->IFLoop($content, $match, $class);
+			}
+			
+			return $content;
+		}
+		
+		private function IFLoop($content, $match1, $class)
+		{
+			foreach($match1[1] as $key => $value) {
+				if (preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $value, $other)) {
+					$match2 = $other;
+					$action = TRUE;
+				} else if (preg_match("|(.+?)\(\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $value, $other)){
+					$match2 = $other;
+					$action = FALSE;
+				} else continue;
+			
+				if (!preg_match("|[\W]+|s", $match2[1], $match3)) {
+					if (preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match1[2][$key], $match3)) {
+						$match1[2][$key] .= "<!-- END IF -->";
+						preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match1[2][$key], $match4);
+
+						$replace_good = $this->FoundAIF($match4[1], $class);
+						$replace_else = $this->FoundAIF($match4[2], $class);						
+					} else {
+						$replace_good = $this->FoundAIF($match1[2][$key], $class);
+						$replace_else = '';
+					}
+					
+					if ($action) {
+						$replace = ($class->$match2[1]($match2[2]) == $match2[3]) ? $replace_good : $replace_else;
+					} else $replace = ($class->$match2[1]() == $match2[2]) ? $replace_good : $replace_else;
+					
+					$start_tag = "<!-- IF $value -->";
+					$content = preg_replace("|".preg_quote($start_tag)."(.+?)".preg_quote ('<!-- END IF -->')."|s", $replace, $content,1);
+				}
+			}
+			
+			return $content;
+		}
 
 		/**
 		 * Parse the IF statments
@@ -266,7 +328,7 @@
 								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
 								{
 									if(isset($match2[2]))
-									{
+									{						
 										if($functions->$match2[1]($match2[2]) == $match2[3])
 										{
 											$start_tag = "<!-- IF ".$val2." -->";
@@ -299,7 +361,7 @@
 							{
 								$functions = new $classname();
 								if(!preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $match[2][$key2], $match3))
-								{
+								{		
 									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
@@ -311,6 +373,7 @@
 								}else{
 									$match[2][$key2] .= "<!-- END IF -->";
 									preg_match("|(.+?)\<\!\-\- ELSE \-\-\>(.+?)\<\!\-\- END IF \-\-\>|s", $match[2][$key2], $match4);
+									
 									if($functions->$match2[1]() == $match2[2])
 									{
 										$start_tag = "<!-- IF ".$val2." -->";
@@ -334,18 +397,23 @@
 		private function ParseCalledFunctions($content)
 		{
 			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
-			if (!class_exists($classname)) throw new Exception("Called function class is not a (valid) class", 458);
-			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
-			{
-				$function_class = new $classname();
-				foreach ($match[0] as $key1 => $val1) {
-					$output_function = '';
-					$function_name = $match[1][$key1];
-					$output_function = $function_class->$function_name();
-					$content = str_replace($val1, $output_function, $content);
+			if (!class_exists($classname)) {
+				throw new Exception("Called function class is not a (valid) class", 458);
+			} else {
+				if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
+				{
+					$function_class = new $classname();
+					foreach ($match[0] as $key1 => $val1) {
+						$output_function = '';
+						$function_name = $match[1][$key1];
+						$output_function = $function_class->$function_name();
+						$content = str_replace($val1, $output_function, $content);
+					}
 				}
 			}
+			
 			return $content;
 		}
 	}
+	
 ?>
