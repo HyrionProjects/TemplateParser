@@ -2,7 +2,7 @@
 
 	/**
 	 * Hyrion Parser
-	 * Copyright (C) 2012 Maarten Oosting
+	 * Copyright (C) 2012 Maarten Oosting, Kevin van Steijn
 	 *
 	 * This program is free software; you can redistribute it and/or modify
 	 * it under the terms of the GNU General Public License as published by
@@ -105,8 +105,9 @@
 				if (!empty($filename) && is_array($data)) {
 					if ($content = $this->get_file($filename)) {						
 						//Hier returnt hij de content naar de controller
-						$content = $this->ParseCalledFunctions($content);				
-						$content = $this->parce_ifs($content);
+						$class = $this->get_class();
+						$content = $this->ParseCalledFunctions($content, $class);				
+						$content = $this->parce_ifs($content, $class);
 						if ($content = $this->start_parce($content, $data)) {
 							$this->content = $content;
 							$action = true;
@@ -235,6 +236,40 @@
 				return $match;
 			}
 		}
+		
+		/**
+		 * Get class 
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private function get_class()
+		{
+			$classname = $this->classname_parserfunctions;
+			if (empty($classname)) $classname = 'Parser_functions'; 
+			if (!class_exists($classname))
+				throw new Exception("Called function class is not a (valid) class", 458);
+			
+			return new $classname();
+		}
+		
+		/**
+		 * Parse TRUE or FALSE to a string
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private function convert_to_string($output)
+		{
+			if (is_bool($output) === TRUE) {
+				$output = var_export($output, TRUE);
+				$output = strtoupper("$output");	
+			}
+			
+			return $output;
+		}
 
 		/**
 		 * Parse the IF statments
@@ -256,9 +291,8 @@
 
 		public $test_temp = 0;
 
-		private function parce_ifs($content)
+		private function parce_ifs($content, $class)
 		{
-			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
 			$content_array = explode(PHP_EOL, $content);
 			//print_r($content_array);
 
@@ -279,20 +313,9 @@
 						if(preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $match1[1], $match2))
 						{
 							//print_r($match2);
-							$class = new $classname();
 							$val1 = $match2[1];
 
-							if($match2[3] == 'TRUE')
-							{
-								$conpare = (bool) TRUE;
-							}elseif ($match2[3] == 'FALSE') {
-								$conpare = (bool) FALSE;
-							}else{
-								$conpare = $match2[3];
-							}
-
-
-							if($class->$val1($match2[2]) == $conpare)
+							if($this->convert_to_string($class->$val1($match2[2])) == $match2[3])
 							{
 								//Gaan we verder
 								$this->test_boolean2 = true;
@@ -468,17 +491,13 @@
 			return $content;
 		}
 
-		private function ParseCalledFunctions($content)
+		private function ParseCalledFunctions($content, $class)
 		{
-			$classname = isset($this->classname_parserfunctions) ? $this->classname_parserfunctions : 'Parser_functions';
-			if (!class_exists($classname)) throw new Exception("Called function class is not a (valid) class", 458);
-			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match))
-			{
-				$function_class = new $classname();
+			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match)) {
 				foreach ($match[0] as $key1 => $val1) {
 					$output_function = '';
 					$function_name = $match[1][$key1];
-					$output_function = $function_class->$function_name();
+					$output_function = $class->$function_name();
 					$content = str_replace($val1, $output_function, $content);
 				}
 			}
