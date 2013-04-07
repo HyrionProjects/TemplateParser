@@ -319,14 +319,11 @@
 							{
 								//Gaan we verder
 								$this->test_boolean2 = true;
-								//echo $class->$val1($match2[2])." : ".$conpare.PHP_EOL;
 							}else{
 								//Gaan we stoppen
 								$content_array[$key] = ' ';
 								$this->test_boolean2 = false;
 								$this->test_counter2 = $this->test_counter+1;
-
-								//$this->test_output2 .= $value.PHP_EOL;
 							}
 						}
 					}else{
@@ -367,20 +364,7 @@
 							echo PHP_EOL;
 						}
 					}else{
-						/*if ($this->test_counter != 0) {
-							$this->test_output2 .= $value.PHP_EOL;
-							$content_array[$key] = ' ';
-							//$this->test_boolean2 = true;
-						}else{
-							$content_array[$key] = ' ';
-							$this->test_boolean2 = true;
-						}*/
-
-						echo $this->test_counter2.':'.$this->test_temp.'.'.$key.PHP_EOL;
-						
-
 						if ($this->test_counter2 == $this->test_temp) {
-
 							//echo $this->test_counter.' : ' . $this->counter_ends . ', ' . $this->test_temp;
 							$content_array[$key] = ' ';
 							$this->test_counter = $this->test_counter -1;
