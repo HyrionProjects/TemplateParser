@@ -344,6 +344,8 @@
 
 				if ($this->test_boolean == true) {
 					$this->test_output .= $value.', '.PHP_EOL;
+				} else if (preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $value)) {
+					echo 'HAHAHAHHAHAHAH';	
 				}
 
 				if(preg_match("|".preg_quote ('<!-- END IF -->')."|s", $value))
