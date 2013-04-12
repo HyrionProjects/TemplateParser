@@ -2,7 +2,7 @@
 
 	/**
 	 * Hyrion Parser
-	 * Copyright (C) 2012 Maarten Oosting, Kevin van Steijn
+	 * Copyright (C) 2012 Maarten Oosting & Kevin van Steijn
 	 *
 	 * This program is free software; you can redistribute it and/or modify
 	 * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,42 @@
 		 * @author Maarten Oosting
 		 */
 		private $classname_parserfunctions = FALSE;
+		
+		/**
+		 * A memory for the action of the if parser
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private $if_action = TRUE;
+		
+		/**
+		 * A memory for the amount of the if parser
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private $if_false = 0;
+		
+		/**
+		 * A memory for the action of the else in if parser
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private $if_else = FALSE;
+		
+		/**
+		 * A memory for a list of content for the if parser
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
+		private $temp = array();
 
 		/**
 		 * Constructor
@@ -266,39 +302,29 @@
 		 *
 		 * @since 1.0
 		 * @access private
-		 * @author Maarten Oosting
-		 */
-		public $if_action = TRUE;
-		public $if_true = 0;
-		public $if_false = 0;
-		public $if_else = FALSE;
-		public $temp = array();
-		
+		 * @author Maarten Oosting & Kevin van Steijn
+		 */		
 		private function parce_ifs($content, $class)
 		{
 			$content_array = explode(PHP_EOL, $content);
 			foreach ($content_array as $key => $value) {
 				if (preg_match("|".preg_quote ('<!-- IF ').'(.+?)'.preg_quote ('-->')."|s", $value, $match1)) {
 					if ($this->if_action) {
-						if (preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $match1[1], $other)) {
-							$match2 = $other;
-							$action = "yes";
+						if (preg_match("|(.+?)\((.+?)\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $match1[1], $match2)) {
+							$action = TRUE;
+							$output1 = $class->$match2[1]($match2[2]);
 							$output2 = $match2[3];
-						} else if (preg_match("|(.+?)\(\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $match1[1], $other)){
-							$match2 = $other;
-							$action = "no";
+						} else if (preg_match("|(.+?)\(\) \=\= ([A-Za-z0-9]{1,})(.+?)|s", $match1[1], $match2)){
+							$action = TRUE;
+							$output1 = $class->$match2[1]();
 							$output2 = $match2[2];
 						} else $action = FALSE;
 						
 						if ($action) {
-							$output1 = ($action == "yes") ? $class->$match2[1]($match2[2]) : $class->$match2[1]();
-							if ($this->convert_to_string($output1) == $output2) {
-								$this->if_action = TRUE;
-								$this->if_true++;
-							} else {
+							if ($this->convert_to_string($output1) !== $output2) {
 								$this->if_action = FALSE;
 								$this->if_false++;
-							}
+							} else $this->if_action = TRUE;
 							
 							unset($content_array[$key]);
 							continue;
@@ -313,17 +339,13 @@
 						$this->if_else = TRUE;
 						unset($content_array[$key]);
 					} else if (preg_match("|".preg_quote ('<!-- IF ').'(.+?)'.preg_quote ('-->')."|s", $value)) {
-						$this->if_true++;
 						unset($content_array[$key]);
 					} else if(preg_match("|".preg_quote ('<!-- END IF -->')."|s", $value)) {
-						$this->if_true--;
+						$this->if_else = FALSE;
 						unset($content_array[$key]);
-					}
-					
-					if ($this->if_true == 0) $this->if_else = FALSE;
-					if ($this->if_else) unset($content_array[$key]);
+					} else if ($this->if_else) unset($content_array[$key]);
 				} else {
-					$this->temp[$key] = $content_array[$key];
+					if (isset($content_array[$key])) $this->temp[$key] = $content_array[$key];
 					if (preg_match("|".preg_quote ('<!-- ELSE -->')."|s", $value)) {
 						$this->if_else = TRUE;
 						$content_array = $this->RemoveLines($content_array, $this->temp);
@@ -331,17 +353,16 @@
 					} else if (preg_match("|".preg_quote ('<!-- IF ').'(.+?)'.preg_quote ('-->')."|s", $value)) {
 						$this->if_false++;
 					} else if(preg_match("|".preg_quote ('<!-- END IF -->')."|s", $value)) {
-						$this->if_false--;
-						
 						if (!$this->if_else)
 							$content_array = $this->RemoveLines($content_array, $this->temp); 
 						
 						$this->if_else = FALSE;
-					}
-					
-					if ($this->if_false == 0) {
-						$this->if_action = TRUE;
-						$this->temp = array();	
+						$this->if_false--;
+						
+						if ($this->if_false == 0) {
+							$this->if_action = TRUE;
+							$this->temp = array();	
+						}
 					}
 				}
 			}
@@ -349,6 +370,13 @@
 			return implode(PHP_EOL, $content_array);
 		}
 		
+		/**
+		 * Remove lines in a array
+		 *
+		 * @since 2.0
+		 * @access private
+		 * @author Kevin van Steijn
+		 */
 		private function RemoveLines($arguments1, $arguments2)
 		{
 			foreach ($arguments2 as $key => $value)
