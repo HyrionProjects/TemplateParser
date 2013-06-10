@@ -128,23 +128,22 @@
 		public function parse($filename, $data)
 		{
 			try {
-				$action = false;
 				if (!empty($filename) && is_array($data)) {
-					if ($content = $this->get_file($filename)) {						
-						//Hier returnt hij de content naar de controller
+					if ($content = $this->get_file($filename)) {
 						$class = $this->get_class();
+						$content = $this->start_parce($content, $data);
 						$content = $this->ParseCalledFunctions($content, $class);				
 						$content = $this->parce_ifs($content, $class);
-						if ($content = $this->start_parce($content, $data)) {
-							$this->content = $content;
-							$action = true;
-						}
+						
+						$this->content = $content;
+						
+						return TRUE;
 					}
 				}
-				return $action;
+				
+				return FALSE;
 			} catch (Exception $e) {
-				print_r($e->getMessage());
-				exit();
+				exit($e->getMessage());
 			}
 		}
 
@@ -156,7 +155,7 @@
 		 * @access public
 		 * @author Maarten Oosting
 		 */			
-		public function getContent()
+		public function get_content()
 		{
 			try{
 				$content = $this->content;
@@ -222,27 +221,30 @@
 		 *
 		 * @since 1.0
 		 * @access private
-		 * @author Maarten Oosting
+		 * @author Maarten Oosting, Kevin van Steijn
 		 */	
-		private function parse_array($var,$data,$content)
+		private function parse_array($var, $data, $content)
 		{
-			$match = $this->match($content, $var);
-			if ($match == false) return $content;
-
-			$data_all = '';
-			foreach($data as $value) {
-				if (is_array($value)) {
-					$cache = $match['1'];
-					foreach($value as $key => $val) {
-						if (is_array($val)) {
-							$cache = $this->parse_array($key,$val,$cache);
-						} else $cache = $this->parse_one($key,$val,$cache);
+			$pattern = "|". $this->p_prefix . $var . $this->p_suffix . "(.+?)" . $this->p_prefix . '/' . $var . $this->p_suffix . "|s";
+			preg_match_all($pattern, $content, $all, PREG_SET_ORDER);
+			foreach ($all as $match) {
+				$data_all = '';
+				foreach($data as $value) {
+					if (is_array($value)) {
+						$cache = $match[1];
+						foreach($value as $key => $val) {
+							if (is_array($val)) {
+								$cache = $this->parse_array($key,$val,$cache);
+							} else $cache = $this->parse_one($key,$val,$cache);
+						}
+						$data_all .= $cache;
 					}
-					$data_all .= $cache;
 				}
+				
+				$content = str_replace($match[0], $data_all, $content);
 			}
-
-			return str_replace($match['0'], $data_all, $content);
+			
+			return $content;
 		}
 
 		/**
