@@ -132,7 +132,7 @@
 					if ($content = $this->get_file($filename)) {
 						$class = $this->get_class();
 						$content = $this->start_parce($content, $data);
-						$content = $this->ParseCalledFunctions($content, $class);				
+						$content = $this->parce_loads($content, $class);			
 						$content = $this->parce_ifs($content, $class);
 						
 						$this->content = $content;
@@ -386,17 +386,29 @@
 			
 			return $arguments1;
 		}
-
-		private function ParseCalledFunctions($content, $class)
+		
+		/**
+		 * Load fucntions
+		 *
+		 * @since 1.0
+		 * @access private
+		 * @author Maarten Oosting, Kevin van Steijn
+		 */
+		private function parce_loads($content, $class)
 		{
-			if (preg_match_all("|".preg_quote ('<!-- LOAD_FUNCTION[')."(.+?)".preg_quote ('] -->')."|s", $content, $match)) {
-				foreach ($match[0] as $key1 => $val1) {
-					$output_function = '';
-					$function_name = $match[1][$key1];
-					$output_function = $class->$function_name();
-					$content = str_replace($val1, $output_function, $content);
+			$pattern = "|".preg_quote ('<!-- LOAD ').'(.+?)'.preg_quote ('-->')."|s";
+			if (preg_match_all($pattern, $content, $all, PREG_SET_ORDER)) {
+				foreach ($all as $match1) {
+					if (preg_match("|(.+?)\((.+?)\)|s", $match1[1], $match2)) {
+						$output = $class->$match2[1]($match2[2]);
+					} else if (preg_match("|(.+?)\(\)|s", $match1[1], $match2)) {
+						$output = $class->$match2[1]();
+					} else $output = '';
+					
+					$content = str_replace($match1[0], $output, $content);
 				}
 			}
+			
 			return $content;
 		}
 	}
